@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<Headers>
+	<Dataset></Dataset>
+	<Header>filename</Header>
+	<Header>text</Header>
+	<Header>up_votes</Header>
+	<Header>down_votes</Header>
+	<Header>age</Header>
+	<Header>gender</Header>
+	<Header>accent</Header>
+	<Header>duration</Header>
+</Headers>
