@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-import psycopg2
+from ..Dependencies.Database import psycopg2
 
 
 configPath = '../Dependencies/Database/server.config'
@@ -62,7 +62,11 @@ def Disconnect(connection, cursor):
     print("[Warning] Could not close cursor. No cursor found.\n")
   return success
   
+def ListTables(cursor):
+	cur.execute("SELECT * FROM pg_catalog.pg_tables;")
+
 def Main():
   (curs, con)=Connect(configPath)
+  ListTables(curs)
   Disconnect(con,curs)
 Main()
