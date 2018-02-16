@@ -1,8 +1,9 @@
 import xml.etree.ElementTree as ET
-from ..Dependencies.Database import psycopg2
+import psycopg2
 
 
-configPath = '../Dependencies/Database/server.config'
+configPath = 'Dependencies/server.config'
+
 '''
 Function: Reads server config file and converts xml to dictionary
 Args:
@@ -34,6 +35,7 @@ def Connect(filename):
       password=credentials['password'],
       host=credentials['host'])
     cur = conn.cursor()
+    print('Successfully connected to:', credentials['host'])
   except:
     print('Couldn\'t connect to server: ', credentials['host'])
     exit() 
@@ -63,7 +65,17 @@ def Disconnect(connection, cursor):
   return success
   
 def ListTables(cursor):
-	cur.execute("SELECT * FROM pg_catalog.pg_tables;")
+  cursor.execute('SELECT * FROM pg_tables WHERE pg_tables.schemaname = \'public\';')
+  res = cursor.fetchall()
+  i = 1
+  print('schemaname\ttablename\ttableowner\ttablespace\thasindexes\thasrules\thastriggers\trowsecurity')
+  for table in res:
+    print(i,'. ',end='')
+    for attr in table:
+      print(attr, end='\t')
+    i += 1
+    print('')
+
 
 def Main():
   (curs, con)=Connect(configPath)
