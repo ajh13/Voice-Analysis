@@ -1,6 +1,8 @@
 import xml.etree.ElementTree as ET
 import psycopg2
-
+import paramiko
+import os, sys
+from stat import S_ISDIR
 
 configPath = 'Dependencies/server.config'
 
@@ -18,6 +20,75 @@ def GetCredentials(filename):
   for child in root:
     credentials[child.tag] = child.text
   return credentials
+
+
+'''
+Function: Connects to the SSH server
+Args:
+          @filename: string path leading to server.config file
+Return:   sshClient object and sftp object
+Note:     Make sure to close the connections
+'''
+def SFTPConnect(filename):
+  credents = GetCredentials(filename)
+  host=credents['host']
+  user=credents['sshUser']
+  password=credents['sshPass']
+
+  sshClient = paramiko.SSHClient()
+  sshClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+  sshClient.load_system_host_keys()
+  sshClient.connect(host, 22, user, password)
+  sftp = sshClient.open_sftp()
+
+  return(sshClient,sftp)
+
+
+'''
+Function: Downloads a file to the local system in Files directory
+Args:
+          filename: string path leading to file in the SSH server
+          sftp: sftp object from ssh object
+Return:   Downloads file to Files/filename
+'''
+def GrabFile (sftp, filename):
+  localpath = 'Files/' + filename
+  remotepath = '/mnt/storage/voiceAnalysis/' + filename
+  sftp.get(remotepath, localpath)
+  print('Donwloaded %s to Files/%s' %(filename, filename))
+
+
+'''
+Function: Recursively downloads all files that haven't been downloaded already
+          (will not update files)
+Args:
+          sftp: sftp object from ssh object
+          remotepath: path that you want to download
+Return:   Downloads all remotepath files to Files/
+'''
+def GrabAllFiles (sftp, remotepath):
+  files = []
+  folders = []
+  for f in sftp.listdir_attr(remotepath):
+    if S_ISDIR(f.st_mode):
+      folders.append(f.filename)
+    else:
+      files.append(f.filename)
+      path = remotepath
+      path += f.filename
+      localpath = path
+      localpath = localpath.replace("/mnt/storage/voiceAnalysis/", "Files/")
+      if not os.path.isfile(localpath):
+        sftp.get(path, localpath)
+        print('Downloaded %s' % localpath)
+
+  for folder in folders:
+      new_path= remotepath + folder + '/'
+      localpath = 'Files/' + folder
+      if not os.path.exists(localpath):
+        os.makedirs(localpath)
+      GrabAllFiles(sftp, new_path)
+
 
 
 '''
@@ -81,4 +152,9 @@ def Main():
   (curs, con)=Connect(configPath)
   ListTables(curs)
   Disconnect(con,curs)
+  (ssh, sftp) = SFTPConnect(configPath)
+  GrabFile(sftp, 'test.txt')
+  GrabAllFiles(sftp, '/mnt/storage/voiceAnalysis/')
+  ssh.close()
+  sftp.close()
 Main()
