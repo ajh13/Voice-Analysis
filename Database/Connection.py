@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 import psycopg2
 import paramiko
-import os, sys
+import os
 from stat import S_ISDIR
 
 configPath = 'Dependencies/server.config'
@@ -14,12 +14,12 @@ Return:   containing the keys 'address', 'username',
           'password'(optional)
 '''
 def GetCredentials(filename):
-  credentials = {}
-  tree = ET.parse(filename)
-  root = tree.getroot()
-  for child in root:
-    credentials[child.tag] = child.text
-  return credentials
+    credentials = {}
+    tree = ET.parse(filename)
+    root = tree.getroot()
+    for child in root:
+        credentials[child.tag] = child.text
+    return credentials
 
 
 '''
@@ -30,18 +30,20 @@ Return:   sshClient object and sftp object
 Note:     Make sure to close the connections
 '''
 def SFTPConnect(filename):
-  credents = GetCredentials(filename)
-  host=credents['host']
-  user=credents['sshUser']
-  password=credents['sshPass']
+    credents = GetCredentials(filename)
+    host = credents['host']
+    user = credents['sshUser']
+    password = credents['sshPass']
 
-  sshClient = paramiko.SSHClient()
-  sshClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-  sshClient.load_system_host_keys()
-  sshClient.connect(host, 22, user, password)
-  sftp = sshClient.open_sftp()
+    sshClient = paramiko.SSHClient()
+    sshClient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    sshClient.load_system_host_keys()
+    sshClient.connect(host, 22, user, password)
+    sftp = sshClient.open_sftp()
 
-  return(sshClient,sftp)
+    print("Created SFTP to %s server" % host)
+
+    return sshClient, sftp
 
 
 '''
@@ -51,11 +53,13 @@ Args:
           sftp: sftp object from ssh object
 Return:   Downloads file to Files/filename
 '''
-def GrabFile (sftp, filename):
-  localpath = 'Files/' + filename
-  remotepath = '/mnt/storage/voiceAnalysis/' + filename
-  sftp.get(remotepath, localpath)
-  print('Donwloaded %s to Files/%s' %(filename, filename))
+def GrabFile(sftp, filename):
+    localpath = 'Files/' + filename
+    remotepath = '/mnt/storage/voiceAnalysis/' + filename
+    if not os.path.exists('Files'):
+        os.makedirs('Files')
+    sftp.get(remotepath, localpath)
+    print('Downloaded %s to Files/%s' % (filename, filename))
 
 
 '''
@@ -81,6 +85,8 @@ def GrabAllFiles (sftp, remotepath):
       if not os.path.isfile(localpath):
         sftp.get(path, localpath)
         print('Downloaded %s' % localpath)
+      else:
+        print('File already downloaded: %s' % localpath)
 
   for folder in folders:
       new_path= remotepath + folder + '/'
@@ -90,27 +96,26 @@ def GrabAllFiles (sftp, remotepath):
       GrabAllFiles(sftp, new_path)
 
 
-
 '''
 Function: Opens connection to database using credentials passed to function
-          and creates a cursor objeect to be used to execute db operations
+          and creates a cursor object to be used to execute db operations
 Args:     
           @filename: string path leading to server.config file
 Return:   cursor psycopg2 object (Used to perform database operations) 
 '''
 def Connect(filename):
-  credentials = GetCredentials(filename)
-  try:
-    conn = psycopg2.connect(dbname=credentials['dbname'],
-      user=credentials['username'],
-      password=credentials['password'],
-      host=credentials['host'])
-    cur = conn.cursor()
-    print('Successfully connected to:', credentials['host'])
-  except:
-    print('Couldn\'t connect to server: ', credentials['host'])
-    exit() 
-  return (cur, conn)
+    credentials = GetCredentials(filename)
+    try:
+        conn = psycopg2.connect(dbname=credentials['dbname'],
+                                user=credentials['username'],
+                                password=credentials['password'],
+                                host=credentials['host'])
+        cur = conn.cursor()
+        print('Successfully connected to:', credentials['host'])
+    except:
+        print('Couldn\'t connect to server: ', credentials['host'])
+        exit()
+    return (cur, conn)
 
 
 '''
@@ -120,41 +125,30 @@ Return:   Boolean on whether or not both cursor and connection were
           successfully closed
 '''
 def Disconnect(connection, cursor):
-  success = True
-  if(connection):
-    connection.close()
-    print("Closing connection.")
-  else:
-    success = False
-    print("[Warning] Could not close connection. No connection to db found.")
-  if(cursor):
-    cursor.close()
-    print("Closing cursor.")
-  else:
-    success = False
-    print("[Warning] Could not close cursor. No cursor found.\n")
-  return success
-  
+    success = True
+    if (connection):
+        connection.close()
+        print("Closing connection.")
+    else:
+        success = False
+        print("[Warning] Could not close connection. No connection to db found.")
+    if (cursor):
+        cursor.close()
+        print("Closing cursor.")
+    else:
+        success = False
+        print("[Warning] Could not close cursor. No cursor found.\n")
+    return success
+
+
 def ListTables(cursor):
-  cursor.execute('SELECT * FROM pg_tables WHERE pg_tables.schemaname = \'public\';')
-  res = cursor.fetchall()
-  i = 1
-  print('schemaname\ttablename\ttableowner\ttablespace\thasindexes\thasrules\thastriggers\trowsecurity')
-  for table in res:
-    print(i,'. ',end='')
-    for attr in table:
-      print(attr, end='\t')
-    i += 1
-    print('')
-
-
-def Main():
-  (curs, con)=Connect(configPath)
-  ListTables(curs)
-  Disconnect(con,curs)
-  (ssh, sftp) = SFTPConnect(configPath)
-  GrabFile(sftp, 'test.txt')
-  GrabAllFiles(sftp, '/mnt/storage/voiceAnalysis/')
-  ssh.close()
-  sftp.close()
-Main()
+    cursor.execute('SELECT * FROM pg_tables WHERE pg_tables.schemaname = \'public\';')
+    res = cursor.fetchall()
+    i = 1
+    print('schemaname\ttablename\ttableowner\ttablespace\thasindexes\thasrules\thastriggers\trowsecurity')
+    for table in res:
+        print(i, '. ', end='')
+        for attr in table:
+            print(attr, end='\t')
+        i += 1
+        print('')
