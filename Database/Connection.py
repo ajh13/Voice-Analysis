@@ -53,13 +53,16 @@ Args:
           sftp: sftp object from ssh object
 Return:   Downloads file to Files/filename
 '''
-def GrabFile(sftp, filename):
-    localpath = 'Files/' + filename
-    remotepath = '/mnt/storage/voiceAnalysis/' + filename
+def GrabFile(sftp,filename,remotepath,localpath):
+    localpath += filename
+    remotepath += filename
     if not os.path.exists('Files'):
         os.makedirs('Files')
-    sftp.get(remotepath, localpath)
-    print('Downloaded %s to Files/%s' % (filename, filename))
+    if not os.path.isfile(localpath):
+        sftp.get(remotepath, localpath)
+        print('Downloaded %s to Files/%s' % (filename, localpath))
+    else:
+        print('Already Downloaded File: %s' % filename)
 
 
 '''

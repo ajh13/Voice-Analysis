@@ -1,5 +1,4 @@
-from Connection import Connect, ListTables, Disconnect
-from shutil import copyfile
+from Connection import Connect, ListTables, Disconnect, GrabFile
 import os
 
 configPath = 'Dependencies/server.config'
@@ -11,31 +10,25 @@ Return:   Copies files from Files/cv-valid-train and place into Training/female 
 Notes:    Need to download all cv-valid-train files before running this function
 '''
 
-def CopyBasedOnGenderToTraining(cursor):
+def CopyBasedOnGenderToTraining(cursor,sftp):
+    if not os.path.exists('Training/female/'):
+        os.makedirs('Training/female/')
+    if not os.path.exists('Training/male/'):
+        os.makedirs('Training/male/')
     # Copy male data to Training/male
     cursor.execute("SELECT filename FROM trainingdata WHERE gender = 'male'")
     row = cursor.fetchall()
     for item in row:
         for filename in item:
-            location = 'Files/' + filename
             filename = filename.replace('cv-valid-train/', '')
-            newLocation = 'Training/male/' + filename
-            if not os.path.exists('Training/male/'):
-                os.makedirs('Training/male/')
-            copyfile(location,newLocation)
-            print(filename)
+            GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/','Training/male/')
     # Copy female data to Training/female
     cursor.execute("SELECT filename FROM trainingdata WHERE gender = 'female'")
     row = cursor.fetchall()
     for item in row:
         for filename in item:
-            location = 'Files/' + filename
             filename = filename.replace('cv-valid-train/', '')
-            newLocation = 'Training/female/' + filename
-            if not os.path.exists('Training/female/'):
-                os.makedirs('Training/female/')
-            copyfile(location,newLocation)
-            print(filename)
+            GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/','Training/female/')
 
 
 # def Main():
