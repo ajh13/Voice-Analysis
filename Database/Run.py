@@ -1,11 +1,12 @@
-from Connection import Connect,SFTPConnect,GrabAllFiles,Disconnect
+from Connection import Connect,SFTPConnect,GrabAllFiles,Disconnect,ListTables
 from PrepareTraining import CopyBasedOnGenderToTraining
 
 configPath = 'Database/Dependencies/server.config'
 def Main():
     (curs, con) = Connect(configPath)
     (ssh, sftp) = SFTPConnect(configPath)
-    GrabAllFiles(sftp, '/mnt/storage/voiceAnalysis/cv-valid-train/')
+    ListTables(curs)
+    GrabAllFiles(sftp, '/mnt/storage/voiceAnalysis/')
     CopyBasedOnGenderToTraining(curs)
     Disconnect(con, curs)
     ssh.close()

@@ -71,6 +71,8 @@ Args:
 Return:   Downloads all remotepath files to Files/
 '''
 def GrabAllFiles (sftp, remotepath):
+  if not os.path.exists("Files"):
+    os.makedirs("Files")
   files = []
   folders = []
   for f in sftp.listdir_attr(remotepath):
