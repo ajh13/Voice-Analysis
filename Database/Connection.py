@@ -60,7 +60,7 @@ def GrabFile(sftp,filename,remotepath,localpath):
         os.makedirs('Files')
     if not os.path.isfile(localpath):
         sftp.get(remotepath, localpath)
-        print('Downloaded %s to Files/%s' % (filename, localpath))
+        print('Downloaded %s to %s' % (filename, localpath))
     else:
         print('Already Downloaded File: %s' % filename)
 

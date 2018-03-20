@@ -1,5 +1,6 @@
 from Connection import Connect, ListTables, Disconnect, GrabFile
 import os
+import re
 
 configPath = 'Dependencies/server.config'
 
@@ -7,7 +8,6 @@ configPath = 'Dependencies/server.config'
 Function: Copies files to Male and Female folders based on database gender column.
 Args:     Cursor connection created from connection.py
 Return:   Copies files from Files/cv-valid-train and place into Training/female or Training/male
-Notes:    Need to download all cv-valid-train files before running this function
 '''
 
 def CopyBasedOnGenderToTraining(cursor,sftp):
@@ -30,9 +30,30 @@ def CopyBasedOnGenderToTraining(cursor,sftp):
             filename = filename.replace('cv-valid-train/', '')
             GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/','Training/female/')
 
+'''
+Function: Copies mp3 files to folders based on all types specified in the column arg
+Args:     Cursor connection created from connection.py
+          sftp connection created from connection.py
+          column in the database you want to organize the files by
+Return:   Copies files from Files/cv-valid-train and place into Training folder with sub folders
+'''
 
-# def Main():
-#     (cursor, con) = Connect(configPath)
-#     CopyFilesToProperFolders(cursor)
-#     Disconnect(con, cursor)
-# Main()
+def CopyBasedOnColumn(cursor,sftp,column):
+    sqlStatement = "SELECT " + column + " FROM trainingdata GROUP BY " + column
+    cursor.execute(sqlStatement)
+    columnItems = cursor.fetchall()
+    regex = re.compile('[^a-zA-Z]')
+    for item in columnItems:
+        itemName = regex.sub('',str(item))
+        if itemName != 'None' and itemName != 'other':
+            filePath = 'Training/' + itemName + '/'
+            if not os.path.exists(filePath):
+                os.makedirs(filePath)
+            sqlStatement = "SELECT filename FROM trainingdata WHERE gender = '" + itemName + "'"
+            cursor.execute(sqlStatement)
+            row = cursor.fetchall()
+            for file in row:
+                for filename in file:
+                    filename = filename.replace('cv-valid-train/', '')
+                    localPath = 'Training/' + itemName + '/'
+                    GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/',localPath)
