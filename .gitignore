@@ -102,3 +102,6 @@ ENV/
 
 # file directory
 Database/Files/
+Database/Training/
+Voice-Analysis.sublime-project
+Voice-Analysis.sublime-workspace
