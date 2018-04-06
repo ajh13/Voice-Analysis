@@ -57,9 +57,11 @@ Return:   Downloads file to Files/filename
 def GrabFile(sftp,filename,remotepath,localpath):
     localpath += filename
     remotepath += filename
+    wavFile = localpath[:-4] + '.wav'
+    mp3File = localpath[:-4] + '.mp3'
     if not os.path.exists('Files'):
         os.makedirs('Files')
-    if not os.path.isfile(localpath):
+    if not os.path.isfile(mp3File) and not os.path.isfile(wavFile):
         sftp.get(remotepath, localpath)
         print('Downloaded %s to %s' % (filename, localpath))
         # Convert to wav

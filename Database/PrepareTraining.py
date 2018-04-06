@@ -56,4 +56,4 @@ def CopyBasedOnColumn(cursor,sftp,column):
                 for filename in file:
                     filename = filename.replace('cv-valid-train/', '')
                     localPath = 'Training/' + itemName + '/'
-                    GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/',localPath)
+                    GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/',localPath)        
