@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import psycopg2
 import paramiko
 import os
+from ConvertAudio import dumpWAV
 from stat import S_ISDIR
 
 configPath = 'Dependencies/server.config'
@@ -61,6 +62,9 @@ def GrabFile(sftp,filename,remotepath,localpath):
     if not os.path.isfile(localpath):
         sftp.get(remotepath, localpath)
         print('Downloaded %s to %s' % (filename, localpath))
+        # Convert to wav
+        dumpWAV(localpath)
+        print('Converted %s to .wav format' % (localpath))
     else:
         print('Already Downloaded File: %s' % filename)
 
