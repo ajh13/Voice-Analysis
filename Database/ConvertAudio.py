@@ -17,13 +17,11 @@ def dumpWAV( name ):
 def get_files():
   files = []
   for (path, dirnames, filenames) in os.walk('Training'):
-    for name in filenames:
-      if name.endswith(".wav"):
-        files.extend(os.path.join(path, name))
+    files.extend(os.path.join(path, name) for name in filenames)
   return files
   
 def convertWAVtoSpectro(file):
-  print("Before %s" % file)
+  print("Before: %s" % file)
   sample_rate, samples = wavfile.read(file)
   frequencies, times, spectogram = signal.spectrogram(samples, sample_rate)
 
@@ -36,33 +34,16 @@ def convertWAVtoSpectro(file):
   print("Converted to Sepctrogram: %s" % file)
 
 def convertAllSpectro():
+  all_files = []
   all_files = get_files()
   for file in all_files:
-    pngFile = file.split(".wav")[0]
-    pngFile += ".png"
+    if ".wav" in file:
+      pngFile = file.split(".wav")[0]
+      pngFile += ".png"
+    else:
+      pngFile = file
     if not os.path.isfile(pngFile):
       convertWAVtoSpectro(file)
     else:
-      print('Alreaded Converted: %s' % filename)
-
-# def get
-
-# def load_sound_files(files):
-#     raw_sounds = []
-#     for fp in files:
-#         X,sr = librosa.load(fp)
-#         raw_sounds.append(X)
-#     return raw_sounds
-
-# def plot_waveform(raw_sounds):
-#     i = 1
-#     fig = plt.figure(figsize=(25, 60))
-#     title = 'test'
-#     fig.suptitle("Waveform " + title, fontsize=12)
-#     for f in raw_sounds:
-#         plt.subplot(14, 1, i)
-#         librosa.display.waveplot(np.array(f), sr=22050)
-#         i += 1
-#     plt.show()
-
-convertAllSpectro()
+      print('Alreaded Converted: %s' % file)
+      
