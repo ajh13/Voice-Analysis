@@ -2,9 +2,8 @@ import xml.etree.ElementTree as ET
 import psycopg2
 import paramiko
 import os
-from ConvertAudio import dumpWAV
-from stat import S_ISDIR
-
+import Database.ConvertAudio
+import stat
 configPath = 'Dependencies/server.config'
 
 '''
@@ -31,6 +30,10 @@ Return:   sshClient object and sftp object
 Note:     Make sure to close the connections
 '''
 def SFTPConnect(filename):
+    cwd = os.getcwd()
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
     credents = GetCredentials(filename)
     host = credents['host']
     user = credents['sshUser']
@@ -43,7 +46,7 @@ def SFTPConnect(filename):
     sftp = sshClient.open_sftp()
 
     print("Created SFTP to %s server" % host)
-
+    os.chdir(cwd)
     return sshClient, sftp
 
 
@@ -65,7 +68,7 @@ def GrabFile(sftp,filename,remotepath,localpath):
         sftp.get(remotepath, localpath)
         print('Downloaded %s to %s' % (filename, localpath))
         # Convert to wav
-        dumpWAV(localpath)
+        Database.ConvertAudio.dumpWAV(localpath)
         print('Converted %s to .wav format' % (localpath))
     else:
         print('Already Downloaded File: %s' % filename)
@@ -80,12 +83,16 @@ Args:
 Return:   Downloads all remotepath files to Files/
 '''
 def GrabAllFiles (sftp, remotepath):
+  cwd = os.getcwd()
+  abspath = os.path.abspath(__file__)
+  dname = os.path.dirname(abspath)
+  os.chdir(dname)
   if not os.path.exists("Files"):
     os.makedirs("Files")
   files = []
   folders = []
   for f in sftp.listdir_attr(remotepath):
-    if S_ISDIR(f.st_mode):
+    if stat.S_ISDIR(f.st_mode):
       folders.append(f.filename)
     else:
       files.append(f.filename)
@@ -105,7 +112,7 @@ def GrabAllFiles (sftp, remotepath):
       if not os.path.exists(localpath):
         os.makedirs(localpath)
       GrabAllFiles(sftp, new_path)
-
+  os.chdir(cwd)
 
 '''
 Function: Opens connection to database using credentials passed to function
@@ -115,6 +122,10 @@ Args:
 Return:   cursor psycopg2 object (Used to perform database operations) 
 '''
 def Connect(filename):
+    cwd = os.getcwd()
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
     credentials = GetCredentials(filename)
     try:
         conn = psycopg2.connect(dbname=credentials['dbname'],
@@ -126,6 +137,7 @@ def Connect(filename):
     except:
         print('Couldn\'t connect to server: ', credentials['host'])
         exit()
+    os.chdir(cwd)
     return (cur, conn)
 
 

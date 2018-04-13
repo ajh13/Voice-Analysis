@@ -1,4 +1,3 @@
-from Connection import Connect, Disconnect
 import csv
 
 configPath = 'Dependencies/server.config'

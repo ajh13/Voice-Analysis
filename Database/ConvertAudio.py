@@ -1,7 +1,7 @@
-from pydub import AudioSegment
+import pydub
 import os
 def dumpWAV( name ):
   filename = os.path.splitext(name)[0] + '.wav'
-  AudioSegment.from_file(name).export(filename, format='wav')
+  pydub.AudioSegment.from_file(name).export(filename, format='wav')
   os.remove(name)
 

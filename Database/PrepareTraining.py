@@ -1,4 +1,4 @@
-from Connection import Connect, ListTables, Disconnect, GrabFile
+from Database import Connection
 import os
 import re
 
@@ -21,14 +21,14 @@ def CopyBasedOnGenderToTraining(cursor,sftp):
     for item in row:
         for filename in item:
             filename = filename.replace('cv-valid-train/', '')
-            GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/','Training/male/')
+            Connection.GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/','Training/male/')
     # Copy female data to Training/female
     cursor.execute("SELECT filename FROM trainingdata WHERE gender = 'female'")
     row = cursor.fetchall()
     for item in row:
         for filename in item:
             filename = filename.replace('cv-valid-train/', '')
-            GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/','Training/female/')
+            Connection.GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/','Training/female/')
 
 '''
 Function: Copies mp3 files to folders based on all types specified in the column arg
@@ -39,6 +39,10 @@ Return:   Copies files from Files/cv-valid-train and place into Training folder 
 '''
 
 def CopyBasedOnColumn(cursor,sftp,column):
+    cwd = os.getcwd()
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
     sqlStatement = "SELECT " + column + " FROM trainingdata GROUP BY " + column
     cursor.execute(sqlStatement)
     columnItems = cursor.fetchall()
@@ -56,4 +60,5 @@ def CopyBasedOnColumn(cursor,sftp,column):
                 for filename in file:
                     filename = filename.replace('cv-valid-train/', '')
                     localPath = 'Training/' + itemName + '/'
-                    GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/',localPath)        
+                    Connection.GrabFile(sftp,filename,'/mnt/storage/voiceAnalysis/cv-valid-train/',localPath)        
+    os.chdir(cwd)
