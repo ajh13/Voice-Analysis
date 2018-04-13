@@ -21,19 +21,22 @@ def get_files():
   return files
   
 def convertWAVtoSpectro(file):
-  print("Before: %s" % file)
   sample_rate, samples = wavfile.read(file)
   frequencies, times, spectogram = signal.spectrogram(samples, sample_rate)
 
   plt.pcolormesh(times, frequencies, spectogram)
   plt.ylim((0, 12000))
-  plt.xlim((0, .935))
+  plt.xlim((.5, 3))
   file = file.split(".wav")[0]
   file += ".png"
   plt.savefig(file)
   print("Converted to Sepctrogram: %s" % file)
 
 def convertAllSpectro():
+  cwd = os.getcwd()
+  abspath = os.path.abspath(__file__)
+  dname = os.path.dirname(abspath)
+  os.chdir(dname)
   all_files = []
   all_files = get_files()
   for file in all_files:
@@ -46,4 +49,4 @@ def convertAllSpectro():
       convertWAVtoSpectro(file)
     else:
       print('Alreaded Converted: %s' % file)
-      
+  os.chdir(cwd)
