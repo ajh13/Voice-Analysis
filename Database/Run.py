@@ -6,6 +6,10 @@ try:
   from Database import PrepareTraining
 except:
   import PrepareTraining
+try:
+  from Database import ConvertAudio
+except:
+	import ConvertAudio
 
 configPath = 'Dependencies/server.config'
 
@@ -19,3 +23,4 @@ def Main():
     Connection.Disconnect(con, curs)
     ssh.close()
     sftp.close()
+    ConvertAudio.convertAllSpectro()
