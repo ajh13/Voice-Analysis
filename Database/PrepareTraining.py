@@ -1,4 +1,7 @@
-from Database import Connection
+try:
+  from Database import Connection
+except:
+  import Connection
 import os
 import re
 

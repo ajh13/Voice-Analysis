@@ -1,5 +1,11 @@
-from Database import Connection 
-from Database import PrepareTraining
+try:
+  from Database import Connection
+except:
+  import Connection
+try:
+  from Database import PrepareTraining
+except:
+  import PrepareTraining
 
 configPath = 'Dependencies/server.config'
 

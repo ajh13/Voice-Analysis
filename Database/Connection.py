@@ -2,7 +2,10 @@ import xml.etree.ElementTree as ET
 import psycopg2
 import paramiko
 import os
-import Database.ConvertAudio
+try:
+  from Database import ConvertAudio
+except:
+  import ConvertAudio
 import stat
 configPath = 'Dependencies/server.config'
 
@@ -68,7 +71,7 @@ def GrabFile(sftp,filename,remotepath,localpath):
         sftp.get(remotepath, localpath)
         print('Downloaded %s to %s' % (filename, localpath))
         # Convert to wav
-        Database.ConvertAudio.dumpWAV(localpath)
+        ConvertAudio.dumpWAV(localpath)
         print('Converted %s to .wav format' % (localpath))
     else:
         print('Already Downloaded File: %s' % filename)
