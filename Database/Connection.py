@@ -13,7 +13,7 @@ configPath = 'Dependencies/server.config'
 Function: Reads server config file and converts xml to dictionary
 Args:
           @filename: string path leading to server.config file
-Return:   containing the keys 'address', 'username', 
+Return:   containing the keys 'address', 'username',
           'password'(optional)
 '''
 def GetCredentials(filename):
@@ -65,8 +65,9 @@ def GrabFile(sftp,filename,remotepath,localpath):
     remotepath += filename
     wavFile = localpath[:-4] + '.wav'
     mp3File = localpath[:-4] + '.mp3'
-    if not os.path.exists('Files'):
-        os.makedirs('Files')
+    if 'Files' in localpath:
+      if not os.path.exists('Files'):
+          os.makedirs('Files')
     if not os.path.isfile(mp3File) and not os.path.isfile(wavFile):
         sftp.get(remotepath, localpath)
         print('Downloaded %s to %s' % (filename, localpath))
@@ -120,9 +121,9 @@ def GrabAllFiles (sftp, remotepath):
 '''
 Function: Opens connection to database using credentials passed to function
           and creates a cursor object to be used to execute db operations
-Args:     
+Args:
           @filename: string path leading to server.config file
-Return:   cursor psycopg2 object (Used to perform database operations) 
+Return:   cursor psycopg2 object (Used to perform database operations)
 '''
 def Connect(filename):
     cwd = os.getcwd()
