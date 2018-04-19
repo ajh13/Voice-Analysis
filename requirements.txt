@@ -1,0 +1,5 @@
+librosa
+paramiko
+psycopg2
+scipy
+numpy
