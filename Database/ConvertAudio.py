@@ -32,6 +32,20 @@ def convertWAVtoSpectro(file):
   plt.savefig(file)
   print("Converted to Sepctrogram: %s" % file)
 
+def convertWAVtoWAVE(sex, file):
+  samples, sr = librosa.load(file)
+  fig = plt.figure(figsize=(25,60), dpi = 900)
+  n,f = zip(sex,samples):
+  plt.subplot(10,1,1)
+  librosa.display.waveplot(np.array(f),sr=22050)
+  plt.title(n.title())
+  plt.suptitle('Figure 1: Waveplot',x=0.5, y=0.915,fontsize=18)
+  plt.show()
+  #file = file.split(".wav")[0]
+  #ile += ".png"
+  #plt.savefig(file)
+  #print("Converted to Waveplot: %s" % file)
+
 def convertAllSpectro():
   cwd = os.getcwd()
   abspath = os.path.abspath(__file__)
@@ -48,5 +62,5 @@ def convertAllSpectro():
     if not os.path.isfile(pngFile):
       convertWAVtoSpectro(file)
     else:
-      print('Alreaded Converted: %s' % file)
+      print('Already Converted: %s' % file)
   os.chdir(cwd)
