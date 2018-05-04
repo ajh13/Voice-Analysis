@@ -15,12 +15,12 @@ from keras.utils import np_utils
 from keras.models import load_model
 import keras
 # Reverse arrays for 2dConv Layer
-from keras import backend as K
-K.set_image_dim_ordering('th')
+# from keras import backend as K
+# K.set_image_dim_ordering('th')
 
 # Time at which frequency matrix is obtained
 timeOffset = .5
-timeDuration = 1.5
+timeDuration = 2
 
 def get_files():
   files = []
@@ -46,6 +46,13 @@ def WeedOutBadWav(files):
 		i+=1
 	np.savez("GoodFilesArray", good_files)
 	return good_files
+
+def GetQuadratic(fileLocation, tOffset, tDuration):
+	y, sr = librosa.load(fileLocation, offset = tOffset, duration = tDuration)
+	S = np.abs(librosa.stft(y))
+	quadratic = librosa.feature.poly_features(S=S, order=2)
+	print("Quadratic obtained for %s" % fileLocation)
+	return quadratic
 
 def GetFrequencyMatrix(fileLocation, tOffset, tDuration):
 	y, sr = librosa.load(fileLocation, offset = tOffset, duration = tDuration)
@@ -81,14 +88,31 @@ def GetAllFreqency():
 		# 	print("Not proper size")
 	np.savez("FeaturesAndLabels", features, labels)
 
+def GetAllQuadratic():
+	with np.load("GoodFilesArray.npz") as data:
+		files = data['arr_0']
+	size = len(files)
+	features = np.zeros((size, 3, 87),dtype=np.float32)
+	labels = np.zeros(size)
+	i = 0
+	while i < size:
+		quad = GetQuadratic(files[i], timeOffset, timeDuration)
+		features[i] = quad
+		if 'female' in files[i]:
+			labels[i] = 0
+		else:
+			labels[i] = 1
+		i += 1
+	np.savez("QuadraticFeatureAndLabels", features, labels)
+
 def unison_shuffled_copies(a, b):
     assert len(a) == len(b)
     p = np.random.permutation(len(a))
     return a[p], b[p]
 
-def TrainModel(epoch, batch_size):
+def TrainModel(data_file,epoch, batch_size):
 	# Load numpy array
-	with np.load("FeaturesAndLabels.npz") as data:
+	with np.load(data_file) as data:
 		X_train = data['arr_0']
 		y_train = data['arr_1']
 
@@ -108,8 +132,8 @@ def TrainModel(epoch, batch_size):
 	# plt.show()
 
 	# Reshape input data
-	X_train = X_train.reshape(X_train.shape[0], 1, 1025, 65)
-	X_test = X_test.reshape(X_test.shape[0], 1, 1025, 65)
+	X_train = X_train.reshape(X_train.shape[0], 1, 3, 87)
+	X_test = X_test.reshape(X_test.shape[0], 1, 3, 87)
 	print(X_train.shape)
 
 	# Convert data type and normalize values
@@ -125,37 +149,39 @@ def TrainModel(epoch, batch_size):
 
 	# Building model/adding layers
 	model = Sequential()
-	# model.add(Convolution2D(32, 3, 3, activation='relu', input_shape=(1,1025,65)))
-	# # print(model.output_shape)
-	# model.add(Convolution2D(32, 3, 3, activation='relu'))
-	# model.add(MaxPooling2D(pool_size=(2,2)))
-	# model.add(Dropout(0.25))
-	# model.add(Flatten())
-	# model.add(Dense(128, activation='relu'))
-	# model.add(Dropout(0.5))
-	# model.add(Dense(2, activation='softmax'))
-	# model.compile(loss='categorical_crossentropy',
-	#               optimizer='adam',
-	#               metrics=['accuracy'])
-	# model.fit(X_train, Y_train, batch_size=32, nb_epoch=3, verbose=1)
-	model = Sequential()
-	model.add(Convolution2D(32, kernel_size=(5, 5), strides=(1, 1),
-	                 activation='relu',
-	                 input_shape=(1,1025,65)))
-	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-	model.add(Convolution2D(64, (5, 5), activation='relu'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Convolution2D(32, (3, 3), activation='relu', input_shape=(1,3,87), data_format='channels_first'))
+	model.add(Convolution2D(32, 1, 1, activation='relu', input_shape=(1,3,87)))
+	model.add(Convolution2D(32, 1, 1, activation='relu'))
+	model.add(MaxPooling2D(pool_size=(1,1)))
+	model.add(Dropout(0.25))
+
 	model.add(Flatten())
-	model.add(Dense(1000, activation='relu'))
+	model.add(Dense(128, activation='relu'))
+	model.add(Dropout(0.5))
 	model.add(Dense(2, activation='softmax'))
-	model.compile(loss=keras.losses.categorical_crossentropy,
-              optimizer=keras.optimizers.SGD(lr=0.01),
-              metrics=['accuracy'])
-	model.fit(X_train, Y_train,
-          batch_size=batch_size,
-          epochs=epoch,
-          verbose=1,
-          validation_data=(X_test, Y_test))
+	model.compile(loss='categorical_crossentropy',
+	              optimizer='adam',
+	              metrics=['accuracy'])
+	model.fit(X_train, Y_train, batch_size=32, nb_epoch=3, verbose=1)
+
+	# model.add(Convolution2D(32, kernel_size=(5, 5), strides=(1, 1),
+	#                  activation='relu',
+	#                  input_shape=(1,3,87)))
+	# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+	# model.add(Convolution2D(64, (5, 5), activation='relu'))
+	# model.add(MaxPooling2D(pool_size=(2, 2)))
+	# model.add(Flatten())
+	# model.add(Dense(1000, activation='relu'))
+	# model.add(Dense(2, activation='softmax'))
+	# model.compile(loss=keras.losses.categorical_crossentropy,
+ #              optimizer=keras.optimizers.SGD(lr=0.01),
+ #              metrics=['accuracy'])
+	# model.fit(X_train, Y_train,
+ #          batch_size=batch_size,
+ #          epochs=epoch,
+ #          verbose=1,
+ #          validation_data=(X_test, Y_test),
+	# 	  shuffle=True)
 	model.save('my_model.h5')
 	score = model.evaluate(X_test, Y_test, verbose=0)
 	print('Test loss:', score[0])
@@ -169,28 +195,51 @@ def TrainModel(epoch, batch_size):
 good_files = WeedOutBadWav(get_files())
 
 ## GET FREQUENCY AND SAVE TO NPZ FILE ##
-GetAllFreqency()
+GetAllQuadratic()
+# GetAllFreqency()
 
 ## TRAIN MODEL ##
-TrainModel(10, 32)
+TrainModel("QuadraticFeatureAndLabels.npz", 2, 32)
 
 ## LOAD AND TEST MODEL ##
 model = load_model('my_model.h5')
-testItem = GetFrequencyMatrix("AlexVoice.wav", timeOffset, timeDuration)
-testItem = testItem.reshape(1, 1025, 65)
-testItem = testItem.reshape(testItem.shape[0],1, 1025, 65)
+testItem = GetQuadratic("test/male/sample-000266.wav", timeOffset, timeDuration)
+testItem = testItem.reshape(1, 3, 87)
+testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
 testItem = testItem.astype('float32')
-# testItem /= 255
-print(testItem.shape)
-print(testItem)
-prediciton = model.predict_proba(testItem, batch_size=None, verbose=0, steps=None)
+prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
 print(prediciton[0])
-testItem = GetFrequencyMatrix("test/female/sample-000026.wav", timeOffset, timeDuration)
-testItem = testItem.reshape(1, 1025, 65)
-testItem = testItem.reshape(testItem.shape[0],1, 1025, 65)
+
+testItem = GetQuadratic("test/female/sample-004092.wav", timeOffset, timeDuration)
+testItem = testItem.reshape(1, 3, 87)
+testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
 testItem = testItem.astype('float32')
-# testItem /= 255
-print(testItem)
-print(testItem.shape)
-prediciton = model.predict_proba(testItem, batch_size=None, verbose=0, steps=None)
+prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
 print(prediciton[0])
+
+
+
+
+
+## TRYING TO AVERAGE A MATRIX ##
+# y, sr = librosa.load("Training/male/sample-000019.wav",offset=.5,duration=2)
+# S = np.abs(librosa.stft(y))
+# p2 = librosa.feature.poly_features(S=S, order=2)
+# ax = plt.subplot(4,1,1)
+# plt.subplot(4,1,3, sharex=ax)
+# plt.plot(p2[0], label='order=2', alpha=0.8)
+# plt.xticks([])
+# plt.ylabel('Quadratic')
+# plt.subplot(4,1,4, sharex=ax)
+# librosa.display.specshow(librosa.amplitude_to_db(S, ref=np.max),
+#                          y_axis='log')
+# plt.tight_layout()
+# # plt.show()
+# print(p2.shape)
+# for i in p2:
+# 	print(i)
+# for i in testItem:
+# 	print(i.shape)
+# print(testItem.shape)
+# print(testItem.mean(axis=1))
+# print(testItem.mean(axis=0))
