@@ -14,18 +14,20 @@ from  keras.layers import Convolution2D, MaxPooling2D
 from keras.utils import np_utils
 from keras.models import load_model
 import keras
+from sklearn.model_selection import train_test_split
 # Reverse arrays for 2dConv Layer
-from keras import backend as K
-K.set_image_dim_ordering('th')
+# from keras import backend as K
+# K.set_image_dim_ordering('th')
 
 # Time at which frequency matrix is obtained
 timeOffset = .5
 timeDuration = 2
+DATA_PATH = "Training/"
 
 def get_files(foldername):
   files = []
   for (path, dirnames, filenames) in os.walk(foldername):
-  files.extend(os.path.join(path, name) for name in filenames)
+    files.extend(os.path.join(path, name) for name in filenames)
   return files
 
 
@@ -105,13 +107,89 @@ def GetAllQuadratic():
     i += 1
   np.savez("QuadraticFeatureAndLabels", features, labels)
 
-def WavToMFCC(file_path, max_pad_len=11):
-  wave, sr = librosa.load(file_path, mono=True, sr=None)
+def WavToMFCC(file_path, tOffset=timeOffset, tDuration=timeDuration, max_pad_len=11):
+  wave, sr = librosa.load(file_path, mono=True, sr=None, offset = tOffset, duration = tDuration)
   wave = wave[::3]
   mfcc = librosa.feature.mfcc(wave, sr=16000)
-  pad_width = max_pad_len - mfcc.shape[1]
-  mfcc = np.pad(mfcc, pad_width=((0, 0), (0, pad_width)), mode='constant')
+  # pad_width = max_pad_len - mfcc.shape[1]
+  # mfcc = np.pad(mfcc, pad_width=((0, 0), (0, pad_width)), mode='constant')
   return mfcc
+
+def get_labels(path=DATA_PATH):
+  labels = os.listdir(path)
+  label_indices = np.arange(0, len(labels))
+  return labels, label_indices, keras.utils.to_categorical(label_indices)
+
+def save_data_to_array(path=DATA_PATH, max_pad_len=11):
+  labels, _, _ = get_labels(path)
+  for label in labels:
+        # Init mfcc vectors
+    mfcc_vectors = []
+
+    wavfiles = [path + label + '/' + wavfile for wavfile in os.listdir(path + '/' + label)]
+    for wavfile in wavfiles:
+        with contextlib.closing(wave.open(wavfile,'r')) as f:
+          frames = f.getnframes()
+          rate = f.getframerate()
+          dur = frames / float(rate)
+          # y, sr = librosa.load(file)
+          # dur = librosa.get_duration(y=y, sr=sr)
+          if (dur > 3):
+            mfcc = WavToMFCC(wavfile)
+            mfcc_vectors.append(mfcc)
+            print(wavfile + ", appended to array")
+    np.save(label + '.npy', mfcc_vectors)
+    print(label + ", saved to npy")
+
+# test=np.load("female.npy")
+# print(test.shape)
+
+def get_train_test(split_ratio=0.6, random_state=42):
+    # Get available labels
+    labels, indices, _ = get_labels(DATA_PATH)
+
+    # Getting first arrays
+    X = np.load(labels[0] + '.npy')
+    y = np.zeros(X.shape[0])
+
+    # Append all of the dataset into one single array, same goes for y
+    for i, label in enumerate(labels[1:]):
+        x = np.load(label + '.npy')
+        X = np.vstack((X, x))
+        y = np.append(y, np.full(x.shape[0], fill_value= (i + 1)))
+
+    assert X.shape[0] == len(y)
+    return train_test_split(X, y, test_size= (1 - split_ratio), random_state=random_state, shuffle=True)
+
+def NewTrainmodel():
+  X_train, X_test, y_train, y_test = get_train_test()
+  X_train = X_train.reshape(X_train.shape[0], 20, 63, 1)
+  X_test = X_test.reshape(X_test.shape[0], 20, 63, 1)
+  y_train_hot = keras.utils.to_categorical(y_train)
+  y_test_hot = keras.utils.to_categorical(y_test)
+  model = Sequential()
+  model.add(Convolution2D(32, kernel_size=(2, 2), activation='relu', input_shape=(20, 63, 1)))
+  model.add(MaxPooling2D(pool_size=(2, 2)))
+  model.add(Dropout(0.25))
+  model.add(Flatten())
+  model.add(Dense(128, activation='relu'))
+  model.add(Dropout(0.25))
+  model.add(Dense(2, activation='softmax'))
+  model.compile(loss=keras.losses.categorical_crossentropy,
+                optimizer=keras.optimizers.Adadelta(),
+                metrics=['accuracy'])
+  model.fit(X_train, y_train_hot, batch_size=100, epochs=100, verbose=1, validation_data=(X_test, y_test_hot))
+  model.save("NewTrainmodel.h5")
+
+# NewTrainmodel()
+def TestWavAgainstModel(filepath,modelpath):
+  model = load_model(modelpath)
+  sample = WavToMFCC(filepath)
+  sample_reshaped = sample.reshape(1, 20, 63, 1)
+  print((model.predict_proba(sample_reshaped)))
+  del model
+
+# TestWavAgainstModel("test/sample-000010.wav","NewTrainmodel.h5")
 
 def unison_shuffled_copies(a, b):
   assert len(a) == len(b)
@@ -183,16 +261,16 @@ def TrainModel(data_file,epoch, batch_size):
   print('Test loss:', score[0])
   print('Test accuracy:', score[1])
 
-def TestWavAgainstModel(filepath,modelpath):
-  model = load_model(modelpath)
-  testItem = GetQuadratic(filepath, timeOffset, timeDuration)
-  testItem = testItem.reshape(1, 3, 87)
-  testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
-  testItem = testItem.astype('float32')
-  prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
-  print(filepath + " prediction: ")
-  print(prediciton[0])
-  del model
+# def TestWavAgainstModel(filepath,modelpath):
+#   model = load_model(modelpath)
+#   testItem = GetQuadratic(filepath, timeOffset, timeDuration)
+#   testItem = testItem.reshape(1, 3, 87)
+#   testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
+#   testItem = testItem.astype('float32')
+#   prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
+#   print(filepath + " prediction: ")
+#   print(prediciton[0])
+#   del model
 ## GET AND SAVE NPZ FILE OF FILES OVER FIXED SECONDS ##
 # good_files = WeedOutBadWav(get_files("Training"))
 
@@ -201,11 +279,11 @@ def TestWavAgainstModel(filepath,modelpath):
 # GetAllFreqency()
 
 ## TRAIN MODEL ##
-TrainModel("QuadraticFeatureAndLabels.npz", 2, 32)
+# TrainModel("QuadraticFeatureAndLabels.npz", 2, 32)
 
 ## LOAD AND TEST MODEL ##
-TestWavAgainstModel("test/sample-000017.wav","my_model2.h5")
-TestWavAgainstModel("test/sample-000010.wav","my_model2.h5")
+# TestWavAgainstModel("test/sample-000017.wav","my_model2.h5")
+# TestWavAgainstModel("test/sample-000010.wav","my_model2.h5")
 
 
 
