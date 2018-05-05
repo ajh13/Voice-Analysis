@@ -29,6 +29,7 @@ def browse(source, pathLabel):
 
 # Function to report and update file information to training data column
 def fileInfo():
+    #put text= features dictionary of input .wav
     fileinfo = Label(main, text="INSERT STRING FROM CSV HERE", relief="sunken")
     fileinfo.grid(row=1, column=0, sticky=NSEW, padx=1, pady=1)
 
@@ -38,7 +39,10 @@ def updateSpec(file):
     #convertWAVtoSpectro(file)
     file = file.split(".wav")[0]
     file += ".png"
-    print(file)
+    img = ImageTk.PhotoImage(Image.open(file))
+    imgPanel = Label(main, image=img)
+    imgPanel.grid(row=1, column=1, columnspan=2, sticky=N+EW, padx=5, pady=2)
+    
 
 
 # Function to return comparison between recording and model
