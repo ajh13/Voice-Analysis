@@ -72,11 +72,15 @@ def TrainModel():
 	model.save("Model.h5")
 
 def TestModel(filepath):
-	model = load_model("Model.h5")
+	print("TEST")
+	model = load_model("D:/Documents/Voice-Analysis/Database/Model.h5")
+	print("Read in csv to model")
 	x = pd.read_csv(filepath)
 	data_test = x.iloc[:, :].values
+	print("Before Prediction")
 	pred = model.predict(data_test)
+	print("After Prediction")
 	return pred[0]
 
 # TrainModel()
-print(TestModel('Training/female/Output.csv'))
+# print(TestModel('Training/female/Output.csv'))

@@ -1,15 +1,18 @@
-# from ConvertAudio import convertWAVtoSpectro
+from ConvertAudio import convertWAVtoSpectro
 from tkinter import filedialog
 from tkinter import *
 from PIL import ImageTk, Image
-
+from GenerateModel import TestModel
+import os
+import csv
+import time
 a_path = "Browse..."
 output = "Results"
 
 
-def browse(source, pathLabel):
+def browse(source, pathLabel, imgPanel):
     global a_path
-    source.filename = filedialog.askopenfilename(initialdir="C:/Users/Taylor/Documents/GitHub/Voice-Analysis/Audio",
+    source.filename = filedialog.askopenfilename(initialdir="C:/Voice-Analysis/Audio",
                                                  title="Select file",
                                                  filetypes=(("WAV files", "*.wav"), ("all files", "*.*")))
     a_path = source.filename
@@ -22,35 +25,57 @@ def browse(source, pathLabel):
     fileInfo()
 
     # update spectrogram
-    updateSpec()
+    updateSpec(a_path, imgPanel)
 
-    main.update()
 
 
 # Function to report and update file information to training data column
 def fileInfo():
     #put text= features dictionary of input .wav
-    fileinfo = Label(main, text="INSERT STRING FROM CSV HERE", relief="sunken")
+    features ={}
+    featuretext=""
+    # with open('C:/Voice-Analysis/Audio/Features.csv', mode='r') as infile:
+       #  reader = csv.reader(infile)
+       #  features = {rows[0]:rows[1] for rows in reader}
+    with open('C:/Voice-Analysis/Audio/Features.csv') as f:
+        records = csv.DictReader(f)
+        for row in records:
+            print(row)
+            for keys in row:
+                featuretext += keys + ': ' + row[keys] + '\n'
+            # featuretext += row + '\n' 
+    # for keys in features:
+    #       featuretext += keys + " : " + features[keys] + "\n"
+    fileinfo = Label(main, text=featuretext, relief="sunken")
     fileinfo.grid(row=1, column=0, sticky=NSEW, padx=1, pady=1)
 
 
 # Update spectrogram, still need to pull file
-def updateSpec(file):
-    #convertWAVtoSpectro(file)
+def updateSpec(file, imgPanel):
+    convertWAVtoSpectro(file)
     file = file.split(".wav")[0]
     file += ".png"
+    while not os.path.isfile(file):
+        time.sleep(1)
+    print(file)
     img = ImageTk.PhotoImage(Image.open(file))
-    imgPanel = Label(main, image=img)
+    imgPanel.configure(image=img)
+    imgPanel.image = img
     imgPanel.grid(row=1, column=1, columnspan=2, sticky=N+EW, padx=5, pady=2)
+    main.update()
     
 
 
 # Function to return comparison between recording and model
 def updateResults():
     global output
-    output = "WIP"
+    global a_path
+    pred = TestModel("C:/Voice-Analysis/Audio/Features.csv")
+    print("Female: " , pred[0] , " Male: " , pred[1])
+    output = "Female: " , pred[0] , " Male: " , pred[1]
     results = Label(main, text=output, relief="sunken")
     results.grid(row=2, column=1, columnspan=2, sticky=NSEW, padx=2, pady=2)
+
     main.update()
 
 
@@ -63,9 +88,13 @@ main.minsize(1000, 610)
 
 # Initialize top frame widgets
 # Top frame widget layout
+# Put default image here
+img = ImageTk.PhotoImage(Image.open("D:/Documents/Voice-Analysis/Images/Default.png"))
+imgPanel = Label(main, image=img)
+imgPanel.grid(row=1, column=1, columnspan=2, sticky=N+EW, padx=5, pady=2)
 pathHeader = Label(main, text="*.WAV File Path:", relief="raised")
 path = Label(main, text=a_path, relief="sunken")
-getPath = Button(main, text=". . .", command=lambda: browse(main, path))
+getPath = Button(main, text=". . .", command=lambda: browse(main, path, imgPanel))
 getPath.configure(background="light grey")
 
 # Path Layout
@@ -82,10 +111,6 @@ runButton = Button(main, text="Run Analysis", command=updateResults, relief="rai
 runButton.configure(background="light grey")
 runButton.grid(row=2, column=0, sticky=NSEW, padx=40, pady=40)
 
-# Put default image here
-img = ImageTk.PhotoImage(Image.open("C:/Users/Taylor/Documents/GitHub/Voice-Analysis/Images/Default.png"))
-imgPanel = Label(main, image=img)
-imgPanel.grid(row=1, column=1, columnspan=2, sticky=N+EW, padx=5, pady=2)
 
 results = Label(main, text=output, relief="sunken")
 results.grid(row=2, column=1, columnspan=2, sticky=NSEW, padx=2, pady=2)
