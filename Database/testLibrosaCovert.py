@@ -22,9 +22,9 @@ import keras
 timeOffset = .5
 timeDuration = 2
 
-def get_files():
+def get_files(foldername):
   files = []
-  for (path, dirnames, filenames) in os.walk('Training'):
+  for (path, dirnames, filenames) in os.walk(foldername):
     files.extend(os.path.join(path, name) for name in filenames)
   return files
 
@@ -126,11 +126,6 @@ def TrainModel(data_file,epoch, batch_size):
 	y_test = y_train[:(int)(len(y_train)/3)]
 	y_train = y_train[(int)(len(y_train)/3):len(y_train)]
 
-	## PLOT OF FREQUENCY AT ONE SEC ##
-	# print(X_train[0][0].shape)
-	# plt.plot(X_train[0][0])
-	# plt.show()
-
 	# Reshape input data
 	X_train = X_train.reshape(X_train.shape[0], 1, 3, 87)
 	X_test = X_test.reshape(X_test.shape[0], 1, 3, 87)
@@ -164,58 +159,66 @@ def TrainModel(data_file,epoch, batch_size):
 	              metrics=['accuracy'])
 	model.fit(X_train, Y_train, batch_size=32, nb_epoch=3, verbose=1)
 
-	# model.add(Convolution2D(32, kernel_size=(5, 5), strides=(1, 1),
-	#                  activation='relu',
-	#                  input_shape=(1,3,87)))
-	# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-	# model.add(Convolution2D(64, (5, 5), activation='relu'))
-	# model.add(MaxPooling2D(pool_size=(2, 2)))
-	# model.add(Flatten())
-	# model.add(Dense(1000, activation='relu'))
-	# model.add(Dense(2, activation='softmax'))
-	# model.compile(loss=keras.losses.categorical_crossentropy,
- #              optimizer=keras.optimizers.SGD(lr=0.01),
- #              metrics=['accuracy'])
-	# model.fit(X_train, Y_train,
- #          batch_size=batch_size,
- #          epochs=epoch,
- #          verbose=1,
- #          validation_data=(X_test, Y_test),
-	# 	  shuffle=True)
 	model.save('my_model.h5')
 	score = model.evaluate(X_test, Y_test, verbose=0)
 	print('Test loss:', score[0])
 	print('Test accuracy:', score[1])
-	## TEST MODEL WITH ONE DATA POINT ##
-	# testItem = GetFrequencyMatrix("AlexVoice.wav", timeOffset, timeDuration)
-	# prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
-	# print(prediciton)
 
+def TestWavAgainstModel(filepath,modelpath):
+	model = load_model(modelpath)
+	testItem = GetQuadratic(filepath, timeOffset, timeDuration)
+	testItem = testItem.reshape(1, 3, 87)
+	testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
+	testItem = testItem.astype('float32')
+	prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
+	print(filepath + " prediction: ")
+	print(prediciton[0])
+	del model
 ## GET AND SAVE NPZ FILE OF FILES OVER FIXED SECONDS ##
-good_files = WeedOutBadWav(get_files())
+# good_files = WeedOutBadWav(get_files("Training"))
 
 ## GET FREQUENCY AND SAVE TO NPZ FILE ##
-GetAllQuadratic()
+# GetAllQuadratic()
 # GetAllFreqency()
 
 ## TRAIN MODEL ##
-TrainModel("QuadraticFeatureAndLabels.npz", 2, 32)
+# TrainModel("QuadraticFeatureAndLabels.npz", 2, 32)
 
 ## LOAD AND TEST MODEL ##
-model = load_model('my_model.h5')
-testItem = GetQuadratic("test/male/sample-000266.wav", timeOffset, timeDuration)
-testItem = testItem.reshape(1, 3, 87)
-testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
-testItem = testItem.astype('float32')
-prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
-print(prediciton[0])
+TestWavAgainstModel("test/sample-000017.wav","my_model.h5")
+TestWavAgainstModel("test/sample-000010.wav","my_model.h5")
 
-testItem = GetQuadratic("test/female/sample-004092.wav", timeOffset, timeDuration)
-testItem = testItem.reshape(1, 3, 87)
-testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
-testItem = testItem.astype('float32')
-prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
-print(prediciton[0])
+
+
+# model = load_model('my_model.h5')
+# testFiles = get_files('test')
+# test_array = np.zeros((len(testFiles), 3, 87),dtype=np.float32)
+# i = 0
+# for file in testFiles:
+# 	test = GetQuadratic(file,timeOffset,timeDuration)
+# 	if test.shape == np.zeros((3,87)):
+# 		test_array[i] = test
+# 	i += 1
+# print(test_array.shape)
+# test_array = test_array.reshape(test_array.shape[0], 1, 3, 87)
+# test_array = test_array.astype('float32')
+# prediciton = model.predict(test_array, batch_size=32, verbose=2, steps=None)
+# print(prediciton)
+
+
+# testItem = GetQuadratic("test/sample-000017.wav", timeOffset, timeDuration)
+# testItem = testItem.reshape(1, 3, 87)
+# testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
+# testItem = testItem.astype('float32')
+# prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
+# print(prediciton[0])
+
+# testItem = GetQuadratic("test/female/sample-004092.wav", timeOffset, timeDuration)
+# testItem = testItem.reshape(1, 3, 87)
+# testItem = testItem.reshape(testItem.shape[0],1, 3, 87)
+# testItem = testItem.astype('float32')
+# prediciton = model.predict(testItem, batch_size=None, verbose=0, steps=None)
+# print(prediciton[0])
 
 
 
